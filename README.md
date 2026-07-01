@@ -1,2 +1,2 @@
 slop lb generator v
-<img width="1310" height="996" alt="image" src="https://github.com/user-attachments/assets/be35d750-8dbd-4f45-9a82-1c584b999ebf" />
+<img width="1266" height="1199" alt="image" src="https://github.com/user-attachments/assets/b4433d28-206b-4eac-9af8-3c3461b1830d" />
