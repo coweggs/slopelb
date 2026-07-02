@@ -337,13 +337,14 @@ function generateEmbedLink() {
 	el("config-embed").disabled = true;
 
 	await loadAllSheets();
-    
+
 	const targetUrl = buildStateUrl();
 	const rect = el("sheets").getBoundingClientRect();
 	const w = Math.ceil(rect.width);
 	const h = Math.ceil(rect.height);
+	const cacheBust = Date.now();
 
-	const shotUrl = `https://api.microlink.io/?url=${encodeURIComponent(targetUrl)}&screenshot=true&meta=false&embed=screenshot.url&viewport.width=${w}&viewport.height=${h}&waitUntil=networkidle0&waitFor=1500`;
+	const shotUrl = `https://api.microlink.io/?url=${encodeURIComponent(targetUrl)}&screenshot=true&meta=false&embed=screenshot.url&viewport.width=${w}&viewport.height=${h}&waitUntil=networkidle0&waitFor=2000&force=true&_=${cacheBust}`;
 
 	navigator.clipboard.writeText(shotUrl).then(() => {
 		el("config-embed").textContent = "Copied!";
