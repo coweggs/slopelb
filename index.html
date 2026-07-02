@@ -7,13 +7,6 @@
     <title>Slope Leaderboard</title>
     <link rel="stylesheet" href="style.css" />
     <script src="index.js" defer></script>
-
-    <meta property="og:title" content="Score Leaderboard" />
-    <meta property="og:description" content="Live leaderboard, unblocked scores" />
-    <meta property="og:image"
-        content="https://api.microlink.io/?url=https://coweggs.github.io/repo/?template=ub&screenshot=true&meta=false&embed=screenshot.url" />
-    <meta property="og:type" content="website" />
-    <meta name="theme-color" content="#0f0" />
 </head>
 
 <body>
@@ -49,39 +42,23 @@
             </label>
             <div class="config-row">
                 <label>
-                    Spreadsheet ID
-                    <input id="spreadsheet-id" type="text" />
+                    Columns (label:sheetId:sheetName:nameCol:scoreCol)
+                    <textarea id="columns-field" rows="4"></textarea>
                 </label>
-                <label>
-                    Template
-                    <select id="spreadsheet-choice"></select>
-                </label>
-            </div>
-            <div class="config-row">
-                <label>
-                    Sheet names
-                    <input id="sheet-names" type="text" />
-                </label>
-                <label>
-                    Sheet labels
-                    <input id="sheet-labels" type="text" />
-                </label>
-                <label>
-                    Start rank
-                    <input id="start-rank" type="number" min="0" step="1" />
-                </label>
-                <label>
-                    Name cols
-                    <input id="name-cols" type="text" />
-                </label>
-                <label>
-                    Score cols
-                    <input id="score-cols" type="text" />
-                </label>
-                <label>
-                    End rank
-                    <input id="end-rank" type="number" min="0" step="1" />
-                </label>
+                <div class="config-row">
+                    <label>
+                        Template
+                        <select id="spreadsheet-choice"></select>
+                    </label>
+                    <label>
+                        Start rank
+                        <input id="start-rank" type="number" min="0" step="1" />
+                    </label>
+                    <label>
+                        End rank
+                        <input id="end-rank" type="number" min="0" step="1" />
+                    </label>
+                </div>
             </div>
             <div class="config-actions">
                 <button id="config-close" type="button">Close</button>

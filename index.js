@@ -1,35 +1,82 @@
 const PRESETS = {
+	ubplus10: {
+		columns: [
+			{
+				label: "Unblocked",
+				id: "1eljby7eGGqhvvfpIpoeRvTBfg6DQ7_QzHEJl4Sz_sq8",
+				sheetName: "Score",
+				nameCol: 1,
+				scoreCol: 2,
+			},
+			{
+				label: "Plus",
+				id: "1Ogd5Cql3j6lS5r0aE99MDuY7GkxRhg-5onqlmwdoB00",
+				sheetName: "Score",
+				nameCol: 1,
+				scoreCol: 2,
+			},
+		],
+	},
 	ub: {
-		id: "1eljby7eGGqhvvfpIpoeRvTBfg6DQ7_QzHEJl4Sz_sq8",
-		sheetNames: ["Score", "Unofficial Score"],
-		sheetLabels: ["Official", "Unofficial"],
-		nameCols: [1, 1],
-		scoreCols: [2, 2],
+		columns: [
+			{
+				label: "Official",
+				id: "1eljby7eGGqhvvfpIpoeRvTBfg6DQ7_QzHEJl4Sz_sq8",
+				sheetName: "Score",
+				nameCol: 1,
+				scoreCol: 2,
+			},
+			{
+				label: "Unofficial",
+				id: "1eljby7eGGqhvvfpIpoeRvTBfg6DQ7_QzHEJl4Sz_sq8",
+				sheetName: "Unofficial Score",
+				nameCol: 1,
+				scoreCol: 2,
+			},
+		],
 	},
 	plus: {
-		id: "1Ogd5Cql3j6lS5r0aE99MDuY7GkxRhg-5onqlmwdoB00",
-		sheetNames: ["Score", "Unofficial Score"],
-		sheetLabels: ["Official", "Unofficial"],
-		nameCols: [1, 1],
-		scoreCols: [2, 2],
+		columns: [
+			{
+				label: "Official",
+				id: "1Ogd5Cql3j6lS5r0aE99MDuY7GkxRhg-5onqlmwdoB00",
+				sheetName: "Score",
+				nameCol: 1,
+				scoreCol: 2,
+			},
+			{
+				label: "Unofficial",
+				id: "1Ogd5Cql3j6lS5r0aE99MDuY7GkxRhg-5onqlmwdoB00",
+				sheetName: "Unofficial Score",
+				nameCol: 1,
+				scoreCol: 2,
+			},
+		],
 	},
 	highestscoresever: {
-		id: "1UOy09nkR7ggUa4UfFYySOXE1ASu3d55ciZaCpVab7gw",
-		sheetNames: ["Unblocked", "Plus"],
-		sheetLabels: ["Unblocked", "Plus"],
-		nameCols: [1, 1],
-		scoreCols: [0, 0],
+		columns: [
+			{
+				label: "Unblocked",
+				id: "1UOy09nkR7ggUa4UfFYySOXE1ASu3d55ciZaCpVab7gw",
+				sheetName: "Unblocked",
+				nameCol: 1,
+				scoreCol: 0,
+			},
+			{
+				label: "Plus",
+				id: "1UOy09nkR7ggUa4UfFYySOXE1ASu3d55ciZaCpVab7gw",
+				sheetName: "Plus",
+				nameCol: 1,
+				scoreCol: 0,
+			},
+		],
 	},
 };
 
 const DEFAULTS = {
 	boardTitle: "Score Leaderboard",
 	spreadsheetChoice: "ub",
-	spreadsheetId: PRESETS.ub.id,
-	sheetNames: [...PRESETS.ub.sheetNames],
-	sheetLabels: [...PRESETS.ub.sheetLabels],
-	nameCols: [...PRESETS.ub.nameCols],
-	scoreCols: [...PRESETS.ub.scoreCols],
+	columns: PRESETS.ubplus10.columns.map((c) => ({ ...c })),
 	startRank: 1,
 	endRank: 10,
 };
@@ -38,11 +85,11 @@ const COLUMN_WIDTH_PX = 650;
 const BENCHMARK_TOTAL_HEIGHT_PX = 950;
 const BENCHMARK_ROW_COUNT = 10;
 
-let state = { ...DEFAULTS, settingsOpen: false };
+let state = { ...DEFAULTS, columns: DEFAULTS.columns.map((c) => ({ ...c })), settingsOpen: false };
 let rowHeightPx = (BENCHMARK_TOTAL_HEIGHT_PX - 250) / BENCHMARK_ROW_COUNT;
 let calibrated = false;
 let applyTimer = null;
-let suppressAutoApply = false; // true while we're programmatically filling fields from a preset
+let suppressAutoApply = false;
 
 function calibrateRowHeight(columns) {
 	if (calibrated) return;
@@ -59,25 +106,35 @@ function calibrateRowHeight(columns) {
 
 const el = (id) => document.getElementById(id);
 
-function parseList(value, fallback) {
-	const values = (value || "")
-		.split(",")
-		.map((s) => s.trim())
-		.filter(Boolean);
-	return values.length ? values : [...fallback];
-}
-
-function parseNumList(value, fallback) {
-	const values = (value || "")
-		.split(",")
-		.map((s) => Number.parseInt(s.trim(), 10))
-		.filter((n) => !Number.isNaN(n));
-	return values.length ? values : [...fallback];
-}
-
 function parseNum(value, fallback) {
 	const n = Number.parseInt(value, 10);
 	return Number.isNaN(n) ? fallback : n;
+}
+
+// "label:sheetId:sheetName:nameCol:scoreCol" per line
+function parseColumnsField(value, fallback) {
+	const raw = (value || "").trim();
+	if (!raw) return fallback.map((c) => ({ ...c }));
+
+	const cols = raw
+		.split("\n")
+		.map((s) => s.trim())
+		.filter(Boolean)
+		.map((entry) => {
+			const [label, id, sheetName, nameCol, scoreCol] = entry.split(":").map((s) => s.trim());
+			return {
+				label: label || "Column",
+				id: id || DEFAULTS.columns[0].id,
+				sheetName: sheetName || "Sheet1",
+				nameCol: parseNum(nameCol, 1),
+				scoreCol: parseNum(scoreCol, 2),
+			};
+		});
+	return cols.length ? cols : fallback.map((c) => ({ ...c }));
+}
+
+function columnsToField(columns) {
+	return columns.map((c) => `${c.label}:${c.id}:${c.sheetName}:${c.nameCol}:${c.scoreCol}`).join("\n");
 }
 
 function parseEntry(row, nameCol, scoreCol) {
@@ -105,18 +162,18 @@ async function fetchEntries(spreadsheetId, sheetName, nameCol, scoreCol) {
 
 function renderHeader() {
 	el("board-title").textContent = state.boardTitle;
-	el("board-title").colSpan = Math.max(1, state.sheetLabels.length);
+	el("board-title").colSpan = Math.max(1, state.columns.length);
 
 	const headerRow = el("panel-title-row");
 	headerRow.innerHTML = "";
-	for (const label of state.sheetLabels) {
+	for (const col of state.columns) {
 		const th = document.createElement("th");
 		th.className = "panel-title";
-		th.textContent = label;
+		th.textContent = col.label;
 		headerRow.appendChild(th);
 	}
 
-	el("sheets").style.width = `${Math.max(1, state.sheetLabels.length) * COLUMN_WIDTH_PX}px`;
+	el("sheets").style.width = `${Math.max(1, state.columns.length) * COLUMN_WIDTH_PX}px`;
 }
 
 function renderRows(columns) {
@@ -159,8 +216,8 @@ async function loadAllSheets() {
 	renderHeader();
 
 	const columns = await Promise.all(
-		state.sheetNames.map((name, i) =>
-			fetchEntries(state.spreadsheetId, name, state.nameCols[i] ?? 1, state.scoreCols[i] ?? 2)
+		state.columns.map((col) =>
+			fetchEntries(col.id, col.sheetName, col.nameCol, col.scoreCol)
 				.then((entries) => ({ entries }))
 				.catch((err) => ({ error: `Could not load: ${err.message}` })),
 		),
@@ -171,39 +228,6 @@ async function loadAllSheets() {
 }
 
 // --- config modal ---
-
-function applyUrlParams() {
-	const params = new URLSearchParams(location.search);
-	if (!params.toString()) return;
-
-	if (params.has("title")) state.boardTitle = params.get("title");
-	if (params.has("start")) state.startRank = parseNum(params.get("start"), state.startRank);
-	if (params.has("end")) state.endRank = parseNum(params.get("end"), state.endRank);
-	if (params.has("id")) state.spreadsheetId = params.get("id");
-	if (params.has("names")) state.sheetNames = parseList(params.get("names"), state.sheetNames);
-	if (params.has("labels")) state.sheetLabels = parseList(params.get("labels"), state.sheetLabels);
-	if (params.has("nameCols")) state.nameCols = parseNumList(params.get("nameCols"), state.nameCols);
-	if (params.has("scoreCols")) state.scoreCols = parseNumList(params.get("scoreCols"), state.scoreCols);
-
-	// template=ub/plus/highestscoresever loads full preset, overridable by other params above/below it in the string
-	if (params.has("template") && PRESETS[params.get("template")]) {
-		const p = PRESETS[params.get("template")];
-		state.spreadsheetId = params.get("id") || p.id;
-		state.sheetNames = params.has("names") ? state.sheetNames : [...p.sheetNames];
-		state.sheetLabels = params.has("labels") ? state.sheetLabels : [...p.sheetLabels];
-		state.nameCols = params.has("nameCols") ? state.nameCols : [...p.nameCols];
-		state.scoreCols = params.has("scoreCols") ? state.scoreCols : [...p.scoreCols];
-	}
-
-	// align lengths same as applyConfig
-	const n = state.sheetNames.length;
-	while (state.sheetLabels.length < n) state.sheetLabels.push(state.sheetNames[state.sheetLabels.length]);
-	while (state.nameCols.length < n) state.nameCols.push(state.nameCols[state.nameCols.length - 1] ?? 1);
-	while (state.scoreCols.length < n) state.scoreCols.push(state.scoreCols[state.scoreCols.length - 1] ?? 2);
-	state.sheetLabels.length = n;
-	state.nameCols.length = n;
-	state.scoreCols.length = n;
-}
 
 function populateTemplateSelect() {
 	const sel = el("spreadsheet-choice");
@@ -223,13 +247,7 @@ function populateTemplateSelect() {
 function matchesPreset(key) {
 	const p = PRESETS[key];
 	if (!p) return false;
-	return (
-		el("spreadsheet-id").value.trim() === p.id &&
-		el("sheet-names").value.trim() === p.sheetNames.join(", ") &&
-		el("sheet-labels").value.trim() === p.sheetLabels.join(", ") &&
-		el("name-cols").value.trim() === p.nameCols.join(", ") &&
-		el("score-cols").value.trim() === p.scoreCols.join(", ")
-	);
+	return el("columns-field").value.trim() === columnsToField(p.columns);
 }
 
 function syncTemplateBadge() {
@@ -243,23 +261,15 @@ function syncConfigForm() {
 	el("start-rank").value = state.startRank;
 	el("end-rank").value = state.endRank;
 	el("spreadsheet-choice").value = state.spreadsheetChoice;
-	el("spreadsheet-id").value = state.spreadsheetId;
-	el("sheet-names").value = state.sheetNames.join(", ");
-	el("sheet-labels").value = state.sheetLabels.join(", ");
-	el("name-cols").value = state.nameCols.join(", ");
-	el("score-cols").value = state.scoreCols.join(", ");
+	el("columns-field").value = columnsToField(state.columns);
 	syncTemplateBadge();
 }
 
 function loadPreset(key) {
 	const preset = PRESETS[key];
-	if (!preset) return; // "custom" selected manually -> leave fields as-is
+	if (!preset) return;
 	suppressAutoApply = true;
-	el("spreadsheet-id").value = preset.id;
-	el("sheet-names").value = preset.sheetNames.join(", ");
-	el("sheet-labels").value = preset.sheetLabels.join(", ");
-	el("name-cols").value = preset.nameCols.join(", ");
-	el("score-cols").value = preset.scoreCols.join(", ");
+	el("columns-field").value = columnsToField(preset.columns);
 	suppressAutoApply = false;
 	applyConfig();
 }
@@ -284,20 +294,7 @@ function applyConfig() {
 	state.endRank = parseNum(el("end-rank").value, DEFAULTS.endRank);
 	if (state.endRank < state.startRank) [state.startRank, state.endRank] = [state.endRank, state.startRank];
 
-	state.spreadsheetId = el("spreadsheet-id").value.trim() || DEFAULTS.spreadsheetId;
-	state.sheetNames = parseList(el("sheet-names").value, DEFAULTS.sheetNames);
-	state.sheetLabels = parseList(el("sheet-labels").value, DEFAULTS.sheetLabels);
-	state.nameCols = parseNumList(el("name-cols").value, DEFAULTS.nameCols);
-	state.scoreCols = parseNumList(el("score-cols").value, DEFAULTS.scoreCols);
-
-	// keep labels/cols aligned 1:1 with names
-	const n = state.sheetNames.length;
-	while (state.sheetLabels.length < n) state.sheetLabels.push(state.sheetNames[state.sheetLabels.length]);
-	while (state.nameCols.length < n) state.nameCols.push(state.nameCols[state.nameCols.length - 1] ?? 1);
-	while (state.scoreCols.length < n) state.scoreCols.push(state.scoreCols[state.scoreCols.length - 1] ?? 2);
-	state.sheetLabels.length = n;
-	state.nameCols.length = n;
-	state.scoreCols.length = n;
+	state.columns = parseColumnsField(el("columns-field").value, DEFAULTS.columns);
 
 	syncTemplateBadge();
 	state.spreadsheetChoice = el("spreadsheet-choice").value;
@@ -307,13 +304,13 @@ function applyConfig() {
 
 function queueApply() {
 	if (suppressAutoApply) return;
-	syncTemplateBadge(); // flip to "Custom" the instant a field drifts from preset
+	syncTemplateBadge();
 	clearTimeout(applyTimer);
 	applyTimer = setTimeout(applyConfig, 400);
 }
 
 function resetConfig() {
-	state = { ...DEFAULTS, settingsOpen: state.settingsOpen };
+	state = { ...DEFAULTS, columns: DEFAULTS.columns.map((c) => ({ ...c })), settingsOpen: state.settingsOpen };
 	syncConfigForm();
 	loadAllSheets();
 }
@@ -323,11 +320,7 @@ function buildStateUrl() {
 	params.set("title", state.boardTitle);
 	params.set("start", state.startRank);
 	params.set("end", state.endRank);
-	params.set("id", state.spreadsheetId);
-	params.set("names", state.sheetNames.join(","));
-	params.set("labels", state.sheetLabels.join(","));
-	params.set("nameCols", state.nameCols.join(","));
-	params.set("scoreCols", state.scoreCols.join(","));
+	params.set("columns", columnsToField(state.columns));
 	params.set("embed", "1");
 	return `${location.origin}${location.pathname}?${params.toString()}`;
 }
@@ -337,43 +330,52 @@ async function generateEmbedLink() {
 	el("config-embed").disabled = true;
 
 	await loadAllSheets();
+	await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
 
 	const targetUrl = buildStateUrl();
 	const rect = el("sheets").getBoundingClientRect();
-	const w = Math.ceil(rect.width);
-	const h = Math.ceil(rect.height);
+	const w = Math.ceil(rect.width) + 20;
+	const h = Math.ceil(rect.height) + 20;
 	const cacheBust = Date.now();
 
-	const shotUrl = `https://api.microlink.io/?url=${encodeURIComponent(targetUrl)}&screenshot=true&meta=false&embed=screenshot.url&viewport.width=${w}&viewport.height=${h}&waitUntil=networkidle0&waitFor=2000&force=true&_=${cacheBust}`;
+	const shotUrl = `https://api.microlink.io/?url=${encodeURIComponent(targetUrl)}&screenshot=true&meta=false&embed=screenshot.url&viewport.width=${w}&viewport.height=${h}&viewport.deviceScaleFactor=2&waitUntil=networkidle0&waitFor=2000&force=true&_=${cacheBust}`;
 
 	navigator.clipboard.writeText(shotUrl).then(() => {
 		el("config-embed").textContent = "Copied!";
-		setTimeout(() => (el("config-embed").textContent = "Embed Link"), 1500);
+		setTimeout(() => {
+			el("config-embed").textContent = "Generate Embed Link";
+			el("config-embed").disabled = false;
+		}, 1500);
 	});
 }
 
-document.addEventListener("DOMContentLoaded", () => {
-	populateTemplateSelect();
-	applyUrlParams();
+function applyUrlParams() {
+	const params = new URLSearchParams(location.search);
+	if (!params.toString()) return;
 
+	if (params.has("title")) state.boardTitle = params.get("title");
+	if (params.has("start")) state.startRank = parseNum(params.get("start"), state.startRank);
+	if (params.has("end")) state.endRank = parseNum(params.get("end"), state.endRank);
+	if (params.has("columns")) state.columns = parseColumnsField(params.get("columns"), state.columns);
+
+	if (params.has("template") && PRESETS[params.get("template")] && !params.has("columns")) {
+		state.columns = PRESETS[params.get("template")].columns.map((c) => ({ ...c }));
+	}
+}
+
+document.addEventListener("DOMContentLoaded", () => {
 	if (new URLSearchParams(location.search).get("embed") === "1") {
 		document.body.classList.add("embed-mode");
 	}
 
-	const textFields = [
-		"board-title-input",
-		"start-rank",
-		"end-rank",
-		"spreadsheet-id",
-		"sheet-names",
-		"sheet-labels",
-		"name-cols",
-		"score-cols",
-	];
+	populateTemplateSelect();
+	applyUrlParams();
+
+	const textFields = ["board-title-input", "start-rank", "end-rank", "columns-field"];
 	textFields.forEach((id) => el(id).addEventListener("input", queueApply));
 
 	el("spreadsheet-choice").addEventListener("change", (e) => {
-		if (e.target.value === "custom") return; // just a badge state, no preset to load
+		if (e.target.value === "custom") return;
 		loadPreset(e.target.value);
 	});
 
@@ -386,5 +388,6 @@ document.addEventListener("DOMContentLoaded", () => {
 		if (e.key === "Escape") state.settingsOpen ? closeConfig() : openConfig();
 	});
 
+	// if (!new URLSearchParams(location.search).toString()) openConfig();
 	loadAllSheets();
 });
