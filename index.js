@@ -148,6 +148,39 @@ async function loadAllSheets() {
 
 // --- config modal ---
 
+function applyUrlParams() {
+	const params = new URLSearchParams(location.search);
+	if (!params.toString()) return;
+
+	if (params.has("title")) state.boardTitle = params.get("title");
+	if (params.has("start")) state.startRank = parseNum(params.get("start"), state.startRank);
+	if (params.has("end")) state.endRank = parseNum(params.get("end"), state.endRank);
+	if (params.has("id")) state.spreadsheetId = params.get("id");
+	if (params.has("names")) state.sheetNames = parseList(params.get("names"), state.sheetNames);
+	if (params.has("labels")) state.sheetLabels = parseList(params.get("labels"), state.sheetLabels);
+	if (params.has("nameCols")) state.nameCols = parseNumList(params.get("nameCols"), state.nameCols);
+	if (params.has("scoreCols")) state.scoreCols = parseNumList(params.get("scoreCols"), state.scoreCols);
+
+	// template=ub/plus/highestscoresever loads full preset, overridable by other params above/below it in the string
+	if (params.has("template") && PRESETS[params.get("template")]) {
+		const p = PRESETS[params.get("template")];
+		state.spreadsheetId = params.get("id") || p.id;
+		state.sheetNames = params.has("names") ? state.sheetNames : [...p.sheetNames];
+		state.sheetLabels = params.has("labels") ? state.sheetLabels : [...p.sheetLabels];
+		state.nameCols = params.has("nameCols") ? state.nameCols : [...p.nameCols];
+		state.scoreCols = params.has("scoreCols") ? state.scoreCols : [...p.scoreCols];
+	}
+
+	// align lengths same as applyConfig
+	const n = state.sheetNames.length;
+	while (state.sheetLabels.length < n) state.sheetLabels.push(state.sheetNames[state.sheetLabels.length]);
+	while (state.nameCols.length < n) state.nameCols.push(state.nameCols[state.nameCols.length - 1] ?? 1);
+	while (state.scoreCols.length < n) state.scoreCols.push(state.scoreCols[state.scoreCols.length - 1] ?? 2);
+	state.sheetLabels.length = n;
+	state.nameCols.length = n;
+	state.scoreCols.length = n;
+}
+
 function populateTemplateSelect() {
 	const sel = el("spreadsheet-choice");
 	sel.innerHTML = "";
@@ -263,6 +296,7 @@ function resetConfig() {
 
 document.addEventListener("DOMContentLoaded", () => {
 	populateTemplateSelect();
+	applyUrlParams();
 
 	const textFields = ["board-title-input", "start-rank", "end-rank", "spreadsheet-id", "sheet-names", "sheet-labels", "name-cols", "score-cols"];
 	textFields.forEach((id) => el(id).addEventListener("input", queueApply));
@@ -280,6 +314,6 @@ document.addEventListener("DOMContentLoaded", () => {
 		if (e.key === "Escape") state.settingsOpen ? closeConfig() : openConfig();
 	});
 
-	openConfig();
+	if (!new URLSearchParams(location.search).toString()) openConfig();
 	loadAllSheets();
 });
