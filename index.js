@@ -169,13 +169,6 @@ const PRESETS = {
 	allplus: {
 		columns: [
 			{
-				label: "Info",
-				id: "1Ogd5Cql3j6lS5r0aE99MDuY7GkxRhg-5onqlmwdoB00",
-				sheetName: "Info",
-				nameCol: 1,
-				scoreCol: 2,
-			},
-			{
 				label: "Score",
 				id: "1Ogd5Cql3j6lS5r0aE99MDuY7GkxRhg-5onqlmwdoB00",
 				sheetName: "Score",
@@ -499,15 +492,18 @@ async function generateEmbedLink() {
 	el("config-embed").disabled = true;
 
 	await loadAllSheets();
-	await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+
+	// calibration triggers a second render synchronously inside loadAllSheets,
+	// but only for exactly-10-row tables and only once ever — wait a couple
+	// extra frames regardless so any second paint has time to finish
+	await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(() => requestAnimationFrame(r))));
 
 	const targetUrl = buildStateUrl();
 	const rect = el("sheets").getBoundingClientRect();
-	const w = Math.ceil(rect.width) + 20;
-	const h = Math.ceil(rect.height) + 20;
+	const w = Math.ceil(rect.width);
+	const h = Math.ceil(rect.height);
 	const cacheBust = Date.now();
-
-	const shotUrl = `https://api.microlink.io/?url=${encodeURIComponent(targetUrl)}&screenshot=true&meta=false&embed=screenshot.url&viewport.width=${w}&viewport.height=${h}&viewport.deviceScaleFactor=2&waitUntil=networkidle0&waitFor=2000&force=true&_=${cacheBust}`;
+const shotUrl = `https://api.microlink.io/?url=${encodeURIComponent(targetUrl)}&screenshot=true&meta=false&embed=screenshot.url&viewport.width=${w}&viewport.height=${h}&waitUntil=networkidle0&waitFor=3500&force=true&_=${cacheBust}`;
 
 	navigator.clipboard.writeText(shotUrl).then(() => {
 		el("config-embed").textContent = "Copied!";
