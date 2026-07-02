@@ -105,7 +105,7 @@ table {
 }
 
 .config-panel {
-	width: min(520px, 100%);
+	width: min(600px, 100%);
 	border: 6px solid #0f0;
 	background: #050505;
 	padding: 22px;

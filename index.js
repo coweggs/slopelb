@@ -1,33 +1,33 @@
-const SPREADSHEETS = {
-	ub: "1eljby7eGGqhvvfpIpoeRvTBfg6DQ7_QzHEJl4Sz_sq8",
-	plus: "1Ogd5Cql3j6lS5r0aE99MDuY7GkxRhg-5onqlmwdoB00",
+const PRESETS = {
+	ub: { id: "1eljby7eGGqhvvfpIpoeRvTBfg6DQ7_QzHEJl4Sz_sq8", sheetNames: ["Score", "Unofficial Score"], sheetLabels: ["Official", "Unofficial"], nameCols: [1, 1], scoreCols: [2, 2] },
+	plus: { id: "1Ogd5Cql3j6lS5r0aE99MDuY7GkxRhg-5onqlmwdoB00", sheetNames: ["Score", "Unofficial Score"], sheetLabels: ["Official", "Unofficial"], nameCols: [1, 1], scoreCols: [2, 2] },
+	highestscoresever: { id: "1UOy09nkR7ggUa4UfFYySOXE1ASu3d55ciZaCpVab7gw", sheetNames: ["Unblocked", "Plus"], sheetLabels: ["Unblocked", "Plus"], nameCols: [1, 1], scoreCols: [0, 0] },
 };
 
 const DEFAULTS = {
 	boardTitle: "Score Leaderboard",
-	sheetNames: ["Score", "Unofficial Score"],
-	sheetLabels: ["Official", "Unofficial"],
 	spreadsheetChoice: "ub",
+	spreadsheetId: PRESETS.ub.id,
+	sheetNames: [...PRESETS.ub.sheetNames],
+	sheetLabels: [...PRESETS.ub.sheetLabels],
+	nameCols: [...PRESETS.ub.nameCols],
+	scoreCols: [...PRESETS.ub.scoreCols],
 	startRank: 1,
 	endRank: 10,
 };
 
 const COLUMN_WIDTH_PX = 650;
-
-// benchmark: 10 rows (rank 0-9) at 950px total table height
 const BENCHMARK_TOTAL_HEIGHT_PX = 950;
 const BENCHMARK_ROW_COUNT = 10;
 
 let state = { ...DEFAULTS, settingsOpen: false };
-let rowHeightPx = (BENCHMARK_TOTAL_HEIGHT_PX - 250) / BENCHMARK_ROW_COUNT; // rough initial guess, refined below
+let rowHeightPx = (BENCHMARK_TOTAL_HEIGHT_PX - 250) / BENCHMARK_ROW_COUNT;
 let calibrated = false;
+let applyTimer = null;
+let suppressAutoApply = false; // true while we're programmatically filling fields from a preset
 
-// after the first render at the benchmark row count, measure the real
-// rendered table height and correct rowHeightPx so it's exact - this
-// accounts for border-collapse/box-model quirks a naive estimate misses.
 function calibrateRowHeight(columns) {
 	if (calibrated) return;
-
 	const rowCount = Math.abs(state.endRank - state.startRank) + 1;
 	if (rowCount !== BENCHMARK_ROW_COUNT) return;
 
@@ -35,12 +35,7 @@ function calibrateRowHeight(columns) {
 	const error = BENCHMARK_TOTAL_HEIGHT_PX - actualHeight;
 	rowHeightPx += error / rowCount;
 	calibrated = true;
-
-	// TEMP: load the page once with defaults (rank 0-10), open devtools console,
-	// copy this number into ROW_HEIGHT_PX below, then delete this whole
-	// calibration system (see instructions).
 	console.log("CALIBRATED rowHeightPx:", rowHeightPx);
-
 	renderRows(columns);
 }
 
@@ -51,21 +46,24 @@ function parseList(value, fallback) {
 	return values.length ? values : [...fallback];
 }
 
+function parseNumList(value, fallback) {
+	const values = (value || "").split(",").map((s) => Number.parseInt(s.trim(), 10)).filter((n) => !Number.isNaN(n));
+	return values.length ? values : [...fallback];
+}
+
 function parseNum(value, fallback) {
 	const n = Number.parseInt(value, 10);
 	return Number.isNaN(n) ? fallback : n;
 }
 
-function parseEntry(row) {
-	const cells = row.filter((v) => String(v).trim() !== "");
-	if (cells.length >= 2) return { name: String(cells[0]).trim(), score: String(cells[1]).trim() };
-	const match = String(cells[0] || "").match(/^(.*?)[\s:,-]+(\d+(?:\.\d+)?)$/);
-	return match
-		? { name: match[1].trim(), score: match[2].trim() }
-		: { name: String(cells[0] || "").trim(), score: "" };
+function parseEntry(row, nameCol, scoreCol) {
+	return {
+		name: String(row[nameCol] ?? "").trim(),
+		score: String(row[scoreCol] ?? "").trim(),
+	};
 }
 
-async function fetchEntries(spreadsheetId, sheetName) {
+async function fetchEntries(spreadsheetId, sheetName, nameCol, scoreCol) {
 	const url = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/gviz/tq?sheet=${encodeURIComponent(sheetName)}&tqx=out:json`;
 	const res = await fetch(url);
 	if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -77,7 +75,8 @@ async function fetchEntries(spreadsheetId, sheetName) {
 		.filter((r) => r.some((v) => String(v).trim() !== ""));
 
 	if (rows.length === 0) throw new Error("No rows found.");
-	return rows.map(parseEntry);
+
+	return rows.map((row) => parseEntry(row, nameCol, scoreCol));
 }
 
 function renderHeader() {
@@ -110,27 +109,20 @@ function renderRows(columns) {
 			const td = document.createElement("td");
 			td.className = "panel-body";
 
-			if (col.error) {
-				if (rank === start) {
-					td.textContent = col.error;
-					td.classList.add("error");
-				}
-			} else {
-				const entry = col.entries[rank];
-				const left = document.createElement("div");
-				left.className = "entry-left";
-				left.title = entry?.name || "";
-				left.textContent = entry ? `${rank + 1}. ${entry.name}` : `${rank + 1}.`;
+			const entry = col.entries?.[rank];
+			const left = document.createElement("div");
+			left.className = "entry-left";
+			left.title = entry?.name || "";
+			left.textContent = entry ? `${rank + 1}. ${entry.name}` : `${rank + 1}.`;
 
-				const right = document.createElement("div");
-				right.className = "entry-score";
-				right.textContent = entry?.score || "";
+			const right = document.createElement("div");
+			right.className = "entry-score";
+			right.textContent = entry?.score || "";
 
-				const wrapper = document.createElement("div");
-				wrapper.className = "entry-row";
-				wrapper.append(left, right);
-				td.appendChild(wrapper);
-			}
+			const wrapper = document.createElement("div");
+			wrapper.className = "entry-row";
+			wrapper.append(left, right);
+			td.appendChild(wrapper);
 
 			tr.appendChild(td);
 		});
@@ -141,11 +133,10 @@ function renderRows(columns) {
 
 async function loadAllSheets() {
 	renderHeader();
-	const spreadsheetId = SPREADSHEETS[state.spreadsheetChoice] || SPREADSHEETS.ub;
 
 	const columns = await Promise.all(
-		state.sheetNames.map((name) =>
-			fetchEntries(spreadsheetId, name)
+		state.sheetNames.map((name, i) =>
+			fetchEntries(state.spreadsheetId, name, state.nameCols[i] ?? 1, state.scoreCols[i] ?? 2)
 				.then((entries) => ({ entries }))
 				.catch((err) => ({ error: `Could not load: ${err.message}` }))
 		)
@@ -157,13 +148,63 @@ async function loadAllSheets() {
 
 // --- config modal ---
 
+function populateTemplateSelect() {
+	const sel = el("spreadsheet-choice");
+	sel.innerHTML = "";
+	for (const key of Object.keys(PRESETS)) {
+		const opt = document.createElement("option");
+		opt.value = key;
+		opt.textContent = key;
+		sel.appendChild(opt);
+	}
+	const custom = document.createElement("option");
+	custom.value = "custom";
+	custom.textContent = "Custom";
+	sel.appendChild(custom);
+}
+
+function matchesPreset(key) {
+	const p = PRESETS[key];
+	if (!p) return false;
+	return (
+		el("spreadsheet-id").value.trim() === p.id &&
+		el("sheet-names").value.trim() === p.sheetNames.join(", ") &&
+		el("sheet-labels").value.trim() === p.sheetLabels.join(", ") &&
+		el("name-cols").value.trim() === p.nameCols.join(", ") &&
+		el("score-cols").value.trim() === p.scoreCols.join(", ")
+	);
+}
+
+function syncTemplateBadge() {
+	const sel = el("spreadsheet-choice");
+	const match = Object.keys(PRESETS).find(matchesPreset);
+	sel.value = match || "custom";
+}
+
 function syncConfigForm() {
 	el("board-title-input").value = state.boardTitle;
 	el("start-rank").value = state.startRank;
 	el("end-rank").value = state.endRank;
 	el("spreadsheet-choice").value = state.spreadsheetChoice;
+	el("spreadsheet-id").value = state.spreadsheetId;
 	el("sheet-names").value = state.sheetNames.join(", ");
 	el("sheet-labels").value = state.sheetLabels.join(", ");
+	el("name-cols").value = state.nameCols.join(", ");
+	el("score-cols").value = state.scoreCols.join(", ");
+	syncTemplateBadge();
+}
+
+function loadPreset(key) {
+	const preset = PRESETS[key];
+	if (!preset) return; // "custom" selected manually -> leave fields as-is
+	suppressAutoApply = true;
+	el("spreadsheet-id").value = preset.id;
+	el("sheet-names").value = preset.sheetNames.join(", ");
+	el("sheet-labels").value = preset.sheetLabels.join(", ");
+	el("name-cols").value = preset.nameCols.join(", ");
+	el("score-cols").value = preset.scoreCols.join(", ");
+	suppressAutoApply = false;
+	applyConfig();
 }
 
 function openConfig() {
@@ -186,38 +227,57 @@ function applyConfig() {
 	state.endRank = parseNum(el("end-rank").value, DEFAULTS.endRank);
 	if (state.endRank < state.startRank) [state.startRank, state.endRank] = [state.endRank, state.startRank];
 
-	state.spreadsheetChoice = (el("spreadsheet-choice").value || DEFAULTS.spreadsheetChoice).toLowerCase();
+	state.spreadsheetId = el("spreadsheet-id").value.trim() || DEFAULTS.spreadsheetId;
 	state.sheetNames = parseList(el("sheet-names").value, DEFAULTS.sheetNames);
 	state.sheetLabels = parseList(el("sheet-labels").value, DEFAULTS.sheetLabels);
+	state.nameCols = parseNumList(el("name-cols").value, DEFAULTS.nameCols);
+	state.scoreCols = parseNumList(el("score-cols").value, DEFAULTS.scoreCols);
 
-	// keep labels aligned 1:1 with names
-	while (state.sheetLabels.length < state.sheetNames.length) {
-		state.sheetLabels.push(state.sheetNames[state.sheetLabels.length]);
-	}
-	state.sheetLabels.length = state.sheetNames.length;
+	// keep labels/cols aligned 1:1 with names
+	const n = state.sheetNames.length;
+	while (state.sheetLabels.length < n) state.sheetLabels.push(state.sheetNames[state.sheetLabels.length]);
+	while (state.nameCols.length < n) state.nameCols.push(state.nameCols[state.nameCols.length - 1] ?? 1);
+	while (state.scoreCols.length < n) state.scoreCols.push(state.scoreCols[state.scoreCols.length - 1] ?? 2);
+	state.sheetLabels.length = n;
+	state.nameCols.length = n;
+	state.scoreCols.length = n;
 
-	closeConfig();
+	syncTemplateBadge();
+	state.spreadsheetChoice = el("spreadsheet-choice").value;
+
 	loadAllSheets();
+}
+
+function queueApply() {
+	if (suppressAutoApply) return;
+	syncTemplateBadge(); // flip to "Custom" the instant a field drifts from preset
+	clearTimeout(applyTimer);
+	applyTimer = setTimeout(applyConfig, 400);
 }
 
 function resetConfig() {
 	state = { ...DEFAULTS, settingsOpen: state.settingsOpen };
 	syncConfigForm();
+	loadAllSheets();
 }
 
 document.addEventListener("DOMContentLoaded", () => {
-	el("config-apply").addEventListener("click", applyConfig);
+	populateTemplateSelect();
+
+	const textFields = ["board-title-input", "start-rank", "end-rank", "spreadsheet-id", "sheet-names", "sheet-labels", "name-cols", "score-cols"];
+	textFields.forEach((id) => el(id).addEventListener("input", queueApply));
+
+	el("spreadsheet-choice").addEventListener("change", (e) => {
+		if (e.target.value === "custom") return; // just a badge state, no preset to load
+		loadPreset(e.target.value);
+	});
+
 	el("config-close").addEventListener("click", closeConfig);
 	el("config-reset").addEventListener("click", resetConfig);
 	el("config-backdrop").addEventListener("click", (e) => e.target === el("config-backdrop") && closeConfig());
 
 	document.addEventListener("keydown", (e) => {
-		if (e.key === "Enter" && state.settingsOpen) {
-			e.preventDefault();
-			applyConfig();
-		} else if (e.key === "Escape") {
-			state.settingsOpen ? closeConfig() : openConfig();
-		}
+		if (e.key === "Escape") state.settingsOpen ? closeConfig() : openConfig();
 	});
 
 	openConfig();

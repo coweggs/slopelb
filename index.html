@@ -1,75 +1,87 @@
 <!doctype html>
 <html lang="en">
-	<head>
-		<meta charset="UTF-8" />
-		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-		<title>Slope Leaderboard</title>
-		<link rel="stylesheet" href="style.css" />
-		<script src="index.js" defer></script>
-	</head>
-	<body>
-		<main>
-			<table class="scoreboard" id="sheets">
-				<tbody id="header-rows">
-					<tr>
-						<th class="board-title" id="board-title" colspan="2">Unblocked Score Leaderboard</th>
-					</tr>
-					<tr id="panel-title-row">
-						<th class="panel-title"></th>
-						<th class="panel-title"></th>
-					</tr>
-				</tbody>
-				<tbody id="leaderboard-rows">
-					<tr>
-						<td class="panel-body" colspan="2">
-							<div class="loading">Loading...</div>
-						</td>
-					</tr>
-				</tbody>
-			</table>
 
-			<div class="loading" style="margin-top: 12px">Uses the Google Sheet tabs: Score and Unofficial Score.</div>
-		</main>
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Slope Leaderboard</title>
+    <link rel="stylesheet" href="style.css" />
+    <script src="index.js" defer></script>
+</head>
 
-		<div class="config-backdrop" id="config-backdrop" hidden>
-			<div class="config-panel" role="dialog" aria-modal="true" aria-labelledby="config-title">
-				<h2 id="config-title">Leaderboard Settings</h2>
-				<label>
-					Board title
-					<input id="board-title-input" type="text" />
-				</label>
-				<div class="config-row">
-					<label>
-						Start rank
-						<input id="start-rank" type="number" min="0" step="1" />
-					</label>
-					<label>
-						End rank
-						<input id="end-rank" type="number" min="0" step="1" />
-					</label>
-				</div>
-				<label>
-					Spreadsheet
-					<select id="spreadsheet-choice">
-						<option value="ub">UB</option>
-						<option value="plus">Plus</option>
-					</select>
-				</label>
-				<label>
-					Sheet names
-					<input id="sheet-names" type="text" />
-				</label>
-				<label>
-					Sheet labels
-					<input id="sheet-labels" type="text" />
-				</label>
-				<div class="config-actions">
-					<button id="config-apply" type="button">Apply</button>
-					<button id="config-close" type="button">Close</button>
-					<button id="config-reset" type="button">Defaults</button>
-				</div>
-				<p class="config-hint">Use commas to add more columns. Press Escape to toggle this menu.</p>
-			</div>
-		</div>
-	</body>
+<body>
+    <main>
+        <table class="scoreboard" id="sheets">
+            <tbody id="header-rows">
+                <tr>
+                    <th class="board-title" id="board-title" colspan="2">Unblocked Score Leaderboard</th>
+                </tr>
+                <tr id="panel-title-row">
+                    <th class="panel-title"></th>
+                    <th class="panel-title"></th>
+                </tr>
+            </tbody>
+            <tbody id="leaderboard-rows">
+                <tr>
+                    <td class="panel-body" colspan="2">
+                        <div class="loading">Loading...</div>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div class="loading" style="margin-top: 12px">Uses the Google Sheet tabs: Score and Unofficial Score.</div>
+    </main>
+
+    <div class="config-backdrop" id="config-backdrop" hidden>
+        <div class="config-panel" role="dialog" aria-modal="true" aria-labelledby="config-title">
+            <h2 id="config-title">Leaderboard Settings</h2>
+            <label>
+                Board title
+                <input id="board-title-input" type="text" />
+            </label>
+            <div class="config-row">
+                <label>
+                    Spreadsheet ID
+                    <input id="spreadsheet-id" type="text" />
+                </label>
+                <label>
+                    Template
+                    <select id="spreadsheet-choice"></select>
+                </label>
+            </div>
+            <div class="config-row">
+                <label>
+                    Sheet names
+                    <input id="sheet-names" type="text" />
+                </label>
+                <label>
+                    Sheet labels
+                    <input id="sheet-labels" type="text" />
+                </label>
+                <label>
+                    Start rank
+                    <input id="start-rank" type="number" min="0" step="1" />
+                </label>
+                <label>
+                    Name cols
+                    <input id="name-cols" type="text" />
+                </label>
+                <label>
+                    Score cols
+                    <input id="score-cols" type="text" />
+                </label>
+                <label>
+                    End rank
+                    <input id="end-rank" type="number" min="0" step="1" />
+                </label>
+            </div>
+            <div class="config-actions">
+                <button id="config-close" type="button">Close</button>
+                <button id="config-reset" type="button">Defaults</button>
+            </div>
+            <p class="config-hint">Use commas to add more columns. Press Escape to toggle this menu.</p>
+        </div>
+</body>
+
 </html>
