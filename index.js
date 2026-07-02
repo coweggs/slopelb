@@ -332,7 +332,7 @@ function buildStateUrl() {
 	return `${location.origin}${location.pathname}?${params.toString()}`;
 }
 
-function generateEmbedLink() {
+async function generateEmbedLink() {
 	el("config-embed").textContent = "Loading...";
 	el("config-embed").disabled = true;
 
