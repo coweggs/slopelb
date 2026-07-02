@@ -348,13 +348,17 @@ async function generateEmbedLink() {
 
 	navigator.clipboard.writeText(shotUrl).then(() => {
 		el("config-embed").textContent = "Copied!";
-		setTimeout(() => (el("config-embed").textContent = "Generate Embed Link"), 1500);
+		setTimeout(() => (el("config-embed").textContent = "Embed Link"), 1500);
 	});
 }
 
 document.addEventListener("DOMContentLoaded", () => {
 	populateTemplateSelect();
 	applyUrlParams();
+
+	if (new URLSearchParams(location.search).get("embed") === "1") {
+		document.body.classList.add("embed-mode");
+	}
 
 	const textFields = [
 		"board-title-input",
@@ -375,7 +379,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
 	el("config-close").addEventListener("click", closeConfig);
 	el("config-reset").addEventListener("click", resetConfig);
-    el("config-embed").addEventListener("click", generateEmbedLink);
+	el("config-embed").addEventListener("click", generateEmbedLink);
 	el("config-backdrop").addEventListener("click", (e) => e.target === el("config-backdrop") && closeConfig());
 
 	document.addEventListener("keydown", (e) => {

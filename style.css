@@ -7,8 +7,17 @@
 	font-display: swap;
 }
 
-body.embed-mode > *:not(#sheets) { display: none; }
-body.embed-mode { margin: 0; padding: 0; background: transparent; }
+body.embed-mode {
+	margin: 0;
+	padding: 0;
+	/* background: transparent; */
+	display: block; /* override any flex/grid on body */
+}
+body.embed-mode main {
+	display: block; /* override centering if main is the flex container */
+	margin: 0;
+	padding: 0;
+}
 
 body {
 	font-family: '6809 CHARGEN', monospace;
