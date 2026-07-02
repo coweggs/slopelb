@@ -1,7 +1,25 @@
 const PRESETS = {
-	ub: { id: "1eljby7eGGqhvvfpIpoeRvTBfg6DQ7_QzHEJl4Sz_sq8", sheetNames: ["Score", "Unofficial Score"], sheetLabels: ["Official", "Unofficial"], nameCols: [1, 1], scoreCols: [2, 2] },
-	plus: { id: "1Ogd5Cql3j6lS5r0aE99MDuY7GkxRhg-5onqlmwdoB00", sheetNames: ["Score", "Unofficial Score"], sheetLabels: ["Official", "Unofficial"], nameCols: [1, 1], scoreCols: [2, 2] },
-	highestscoresever: { id: "1UOy09nkR7ggUa4UfFYySOXE1ASu3d55ciZaCpVab7gw", sheetNames: ["Unblocked", "Plus"], sheetLabels: ["Unblocked", "Plus"], nameCols: [1, 1], scoreCols: [0, 0] },
+	ub: {
+		id: "1eljby7eGGqhvvfpIpoeRvTBfg6DQ7_QzHEJl4Sz_sq8",
+		sheetNames: ["Score", "Unofficial Score"],
+		sheetLabels: ["Official", "Unofficial"],
+		nameCols: [1, 1],
+		scoreCols: [2, 2],
+	},
+	plus: {
+		id: "1Ogd5Cql3j6lS5r0aE99MDuY7GkxRhg-5onqlmwdoB00",
+		sheetNames: ["Score", "Unofficial Score"],
+		sheetLabels: ["Official", "Unofficial"],
+		nameCols: [1, 1],
+		scoreCols: [2, 2],
+	},
+	highestscoresever: {
+		id: "1UOy09nkR7ggUa4UfFYySOXE1ASu3d55ciZaCpVab7gw",
+		sheetNames: ["Unblocked", "Plus"],
+		sheetLabels: ["Unblocked", "Plus"],
+		nameCols: [1, 1],
+		scoreCols: [0, 0],
+	},
 };
 
 const DEFAULTS = {
@@ -42,12 +60,18 @@ function calibrateRowHeight(columns) {
 const el = (id) => document.getElementById(id);
 
 function parseList(value, fallback) {
-	const values = (value || "").split(",").map((s) => s.trim()).filter(Boolean);
+	const values = (value || "")
+		.split(",")
+		.map((s) => s.trim())
+		.filter(Boolean);
 	return values.length ? values : [...fallback];
 }
 
 function parseNumList(value, fallback) {
-	const values = (value || "").split(",").map((s) => Number.parseInt(s.trim(), 10)).filter((n) => !Number.isNaN(n));
+	const values = (value || "")
+		.split(",")
+		.map((s) => Number.parseInt(s.trim(), 10))
+		.filter((n) => !Number.isNaN(n));
 	return values.length ? values : [...fallback];
 }
 
@@ -138,8 +162,8 @@ async function loadAllSheets() {
 		state.sheetNames.map((name, i) =>
 			fetchEntries(state.spreadsheetId, name, state.nameCols[i] ?? 1, state.scoreCols[i] ?? 2)
 				.then((entries) => ({ entries }))
-				.catch((err) => ({ error: `Could not load: ${err.message}` }))
-		)
+				.catch((err) => ({ error: `Could not load: ${err.message}` })),
+		),
 	);
 
 	renderRows(columns);
@@ -294,11 +318,52 @@ function resetConfig() {
 	loadAllSheets();
 }
 
+function buildStateUrl() {
+	const params = new URLSearchParams();
+	params.set("title", state.boardTitle);
+	params.set("start", state.startRank);
+	params.set("end", state.endRank);
+	params.set("id", state.spreadsheetId);
+	params.set("names", state.sheetNames.join(","));
+	params.set("labels", state.sheetLabels.join(","));
+	params.set("nameCols", state.nameCols.join(","));
+	params.set("scoreCols", state.scoreCols.join(","));
+	params.set("embed", "1");
+	return `${location.origin}${location.pathname}?${params.toString()}`;
+}
+
+function generateEmbedLink() {
+	if (new URLSearchParams(location.search).get("embed") === "1") {
+		document.body.classList.add("embed-mode");
+	}
+
+	const targetUrl = buildStateUrl();
+	const rect = el("sheets").getBoundingClientRect();
+	const w = Math.ceil(rect.width);
+	const h = Math.ceil(rect.height);
+
+	const shotUrl = `https://api.microlink.io/?url=${encodeURIComponent(targetUrl)}&screenshot=true&meta=false&embed=screenshot.url&viewport.width=${w}&viewport.height=${h}`;
+
+	navigator.clipboard.writeText(shotUrl).then(() => {
+		el("config-embed").textContent = "Copied!";
+		setTimeout(() => (el("config-embed").textContent = "Generate Embed Link"), 1500);
+	});
+}
+
 document.addEventListener("DOMContentLoaded", () => {
 	populateTemplateSelect();
 	applyUrlParams();
 
-	const textFields = ["board-title-input", "start-rank", "end-rank", "spreadsheet-id", "sheet-names", "sheet-labels", "name-cols", "score-cols"];
+	const textFields = [
+		"board-title-input",
+		"start-rank",
+		"end-rank",
+		"spreadsheet-id",
+		"sheet-names",
+		"sheet-labels",
+		"name-cols",
+		"score-cols",
+	];
 	textFields.forEach((id) => el(id).addEventListener("input", queueApply));
 
 	el("spreadsheet-choice").addEventListener("change", (e) => {
@@ -308,12 +373,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
 	el("config-close").addEventListener("click", closeConfig);
 	el("config-reset").addEventListener("click", resetConfig);
+    el("config-embed").addEventListener("click", generateEmbedLink);
 	el("config-backdrop").addEventListener("click", (e) => e.target === el("config-backdrop") && closeConfig());
 
 	document.addEventListener("keydown", (e) => {
 		if (e.key === "Escape") state.settingsOpen ? closeConfig() : openConfig();
 	});
 
-	if (!new URLSearchParams(location.search).toString()) openConfig();
 	loadAllSheets();
 });
